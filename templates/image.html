@@ -1,0 +1,15 @@
+<style>
+img {
+    display: block;
+    margin: 0 auto;
+}
+.center {
+    padding: 0 0;
+}
+</style>
+
+<body style="margin: 0px; background: #0e0e0e;">
+  <div class="center">
+    <img src="{{url_for('send_image', filename = image_name, dest = dest)}}" alt="User Image" style="width:100%">
+  </div>
+</body>

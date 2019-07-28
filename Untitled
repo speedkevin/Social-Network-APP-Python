@@ -1,0 +1,35 @@
+create all dir already
+get dir pointer of a specific user
+if dir pointer not exist
+  dir pointer = new create directory path
+if numbers of file under dir pointer = 20
+  if C = 99
+      if B = 99
+        if A = 99
+          create file, save it, save path, reset dir pointer
+          alert
+        else
+          cd A+1/00/00
+          create file, save it, save path, reset dir pointer
+      else
+        cd A/B+1/00
+        create file, save it, save path, reset dir pointer
+  else
+    cd A/B/C+1
+    create file, save it, save path, reset dir pointer
+else
+  create file, save it, save path
+
+  SELF_DIR_POINTER = db.paths.find_one({"_id": ObjectId("5a6bc711f36d286a1cb478d3")})
+  for key, value in SELF_DIR_POINTER.items():
+  	if key == 'path':
+  		SELF_DIR_POINTER = value
+  		print("SELF_DIR_POINTER")
+  		print(SELF_DIR_POINTER)
+  		db.paths.update_one({
+  		  '_id': ObjectId("5a6bc711f36d286a1cb478d3")
+  		},{
+  		  '$set': {
+  		    'path': './dataset/self/10/10/22'
+  		  }
+  		}, upsert=False)

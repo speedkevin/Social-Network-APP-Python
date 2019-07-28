@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script>
+  <link  href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/0.8.1/cropper.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/0.8.1/cropper.min.js"></script>
+  <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.2.1.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+  integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <style>
+  .clickable-div
+  {
+       cursor: pointer;
+  }
+
+  .page {
+  	margin: 1em auto;
+  	max-width: 768px;
+  	display: flex;
+  	align-items: flex-start;
+  	flex-wrap: wrap;
+  	height: 100%;
+  }
+
+  .box {
+  	padding: 0.5em;
+  	width: 100%;
+  	margin:0.5em;
+  }
+
+  .box-2 {
+  	padding: 0.5em;
+  	width: calc(100% - 1em);
+    height: 200%;
+  }
+
+  .options label,
+  .options input{
+  	width:4em;
+  	padding:0.5em 1em;
+  }
+  .btn{
+  	font-size: 100px;
+    height: 200px;
+    width: 100%;
+  }
+
+  .hide {
+  	display: none;
+  }
+
+  img {
+  	max-width: 100%;
+  }
+  .topnav {
+    overflow: hidden;
+    background-color: #1a8cff;
+  }
+
+  .topnav div {
+    float: center;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 100px;
+    font-color: white;
+    color: white;
+  }
+  .fileContainer {
+    background-color: #ff6600;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    height: 150px;
+    font-size: 100px;
+    text-align: center;
+  }
+
+  .fileContainer [type=file] {
+      cursor: inherit;
+      display: block;
+      font-size: 999px;
+      filter: alpha(opacity=0);
+      min-height: 100%;
+      min-width: 100%;
+      opacity: 0;
+      position: absolute;
+      right: 0;
+      text-align: right;
+      top: 0;
+  }
+  .message-result{
+    text-align: center;
+    color: red;
+    font-size: 50px;
+    background-color: #ffcc00;
+  }
+  .myfont {
+    font-size: 50px;
+    font-color: red;
+  }
+  </style>
+</head>
+<body>
+  <!-- Response message -->
+  <div class="message-result" id="message-result"></div>
+
+  <div class="topnav">
+    <div>上傳圖片</div>
+  </div>
+
+
+  <main class="page">
+  	<!-- input file -->
+  	<div class="box">
+
+		    <!-- <input type="file" id="file-input">-->
+
+        <label class="fileContainer">
+            按此上傳檔案
+            <input type="file" id="file-input"/>
+        </label>
+
+  	</div>
+  	<!-- leftbox -->
+  	<div class="box-2">
+      <p class="myfont">選取要上傳的區域(正方形的區域)，然後按『確認』即可。</p>
+  		<div class="result">
+      </div>
+  	</div>
+  	<!--rightbox-->
+  	<div class="box-2 img-result hide">
+  		<!-- result of crop -->
+  		<img class="cropped" src="" alt="">
+  	</div>
+  	<!-- input file -->
+  	<div class="box box-3">
+
+  		<div class="options hide">
+  			<!-- <label> Width</label>-->
+  			<input type="number" class="img-w hide" value="300" min="100" max="1200" />
+      </div>
+
+  		<!-- Save btn -->
+  		<button class="btn save hide btn-primary">確認</button>
+
+  		<!-- download btn
+  		<a href="" class="btn download hide">Download</a>-->
+  	</div>
+
+    </div>
+  </main>
+
+  <div class="progress">
+  </div>
+
+</body>
+</html>
+
+<script>
+// init
+//document.addEventListener("deviceready", init, false);
+//function init() {
+//$(document).ready(function(){
+// vars
+let message = document.querySelector('.message-result'),
+result = document.querySelector('.result'),
+img_result = document.querySelector('.img-result'),
+img_w = document.querySelector('.img-w'),
+img_h = document.querySelector('.img-h'),
+options = document.querySelector('.options'),
+save = document.querySelector('.save'),
+progress = document.querySelector('.progress'),
+cropped = document.querySelector('.cropped'),
+//dwn = document.querySelector('.download'),
+upload = document.querySelector('#file-input'),
+cropper = '';
+
+// on change show image with crop options
+upload.addEventListener('change', (e) => {
+  console.log("size:"+ $('#file-input')[0].files[0].size);
+  var filesize = $('#file-input')[0].files[0].size;
+  // if file size greater than 500KB
+  if(filesize > 2000000){
+    $('#message-result').html("檔案超過2MB，請調整大小，必須低於2MB。");
+  }
+  else if (e.target.files.length) {
+    console.log('aaa');
+		// start file reader
+    const reader = new FileReader();
+    reader.onload = (e)=> {
+      if(e.target.result){
+				// create new image
+				let img = document.createElement('img');
+				img.id = 'image';
+				img.src = e.target.result
+				// clean result & message before
+				result.innerHTML = ''; // result on the left
+        img_result.innerHTML = ''; // result on the right
+        message.innerHTML = '';
+				// append new image
+        result.appendChild(img);
+				// show save btn and options
+				save.classList.remove('hide');
+				options.classList.remove('hide');
+        // Get width & height of container & canvas
+        var mywidth = $(window).width()*0.77;
+        var myheight = $(window).height()*0.77;
+				// init cropper
+				cropper = new Cropper(img, {
+          aspectRatio: 1/1,
+          viewMode: 2,
+          cropBoxResizable: false,
+          dragMode: 'none',
+          minContainerWidth: mywidth,
+          minContainerHeight: myheight,
+          minCanvasWidth: mywidth,
+          minCanvasHeight: myheight,
+          /*
+          ready: function () {
+            // Allows chain composition
+            this.cropper.rotate(-90);
+          },
+          */
+          crop: function(e) {
+            console.log(e.detail.x);
+            console.log(e.detail.y);
+            console.log(e.detail.width);
+            console.log(e.detail.height);
+            console.log(e.detail.rotate);
+            console.log(e.detail.scaleX);
+            console.log(e.detail.scaleY);
+          }
+        });
+        console.log(cropper.getData().x + " " +
+          cropper.getData().y + " " +
+          cropper.getData().width + " " +
+          cropper.getData().height + " " +
+          cropper.getData().rotate + " " +
+          cropper.getData().scaleX + " " +
+          cropper.getData().scaleY + " " +
+          cropper.getImageData().width + " " +
+          cropper.getImageData().height
+        );
+        //cropper("setData", { rotate: 0 });
+
+        console.log("rotate:"+cropper.getData().rotate);
+
+      }
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  } // end else if
+});
+
+
+//$(document).on('click', '.clickable-div', function() {
+
+    //document.location = $(this).data('href');
+
+//});
+// save on click
+save.addEventListener('click',(e)=>{
+  console.log('bbb');
+//$(".save").click(function(e){
+  e.preventDefault();
+
+  progress.classList.remove('hide');
+  $('#progress').html("上傳中...請稍候...");
+
+  // get result to data uri
+  // input value
+  let cropCanvas = cropper.getCroppedCanvas({
+		width: img_w.value
+	})
+  let imgSrc = cropCanvas.toDataURL();
+
+  console.log(cropper.getData().x + " " +
+    cropper.getData().y + " " +
+    cropper.getData().width + " " +
+    cropper.getData().height + " " +
+    cropper.getData().rotate + " " +
+    cropper.getData().scaleX + " " +
+    cropper.getData().scaleY
+  );
+  console.log("width:"+cropper.getImageData().naturalWidth);
+  console.log("height:"+cropper.getImageData().naturalHeight);
+
+  //console.log("width:"+cropper.getImageData().width);
+  //console.log("height:"+cropper.getImageData().height);
+
+  // remove hide class of img
+  cropped.classList.remove('hide');
+	img_result.classList.remove('hide');
+	// show image cropped
+  cropped.src = imgSrc;
+  //dwn.classList.remove('hide');
+  //dwn.download = 'imagename.png';
+  //dwn.setAttribute('href',imgSrc);
+
+  // Upload cropped image to server if the browser supports `HTMLCanvasElement.toBlob`
+  cropper.getCroppedCanvas().toBlob(function (blob) {
+    console.log('ccc');
+    var formData = new FormData();
+
+    formData.append('croppedImage', blob);
+    formData.append('file', $('#file-input')[0].files[0]);
+    formData.append('x', cropper.getData().x);
+    formData.append('y', cropper.getData().y);
+    formData.append('width', cropper.getData().width);
+    formData.append('height', cropper.getData().height);
+    formData.append('rotate', cropper.getData().rotate);
+    formData.append('scaleX', cropper.getData().scaleX);
+    formData.append('scaleY', cropper.getData().scaleY);
+    formData.append('naturalWidth', cropper.getImageData().naturalWidth);
+    formData.append('naturalHeight', cropper.getImageData().naturalHeight);
+    //alert(formData.stringify);
+
+    // Use `jQuery.ajax` method
+    $.ajax('/upload/{{dest}}/{{token}}', {
+      method: "POST",
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function () {
+        $('#message-result').html("上傳成功");
+        $('body').scrollTop(0);
+        $('#progress').addClass("hide");
+      },
+      error: function () {
+        $('#message-result').html("上傳失敗");
+        $('#progress').addClass("hide");
+      }
+    });
+
+  });
+
+//});
+
+}); // end click
+//}); // end ready
+
+//}//end init
+</script>
+
+<script>
+/*
+ * JavaScript Canvas to Blob
+ * https://github.com/blueimp/JavaScript-Canvas-to-Blob
+ *
+ * Copyright 2012, Sebastian Tschan
+ * https://blueimp.net
+ *
+ * Licensed under the MIT license:
+ * https://opensource.org/licenses/MIT
+ *
+ * Based on stackoverflow user Stoive's code snippet:
+ * http://stackoverflow.com/q/4998908
+ */
+
+/* global atob, Blob, define */
+
+;(function (window) {
+  'use strict'
+
+  var CanvasPrototype =
+    window.HTMLCanvasElement && window.HTMLCanvasElement.prototype
+  var hasBlobConstructor =
+    window.Blob &&
+    (function () {
+      try {
+        return Boolean(new Blob())
+      } catch (e) {
+        return false
+      }
+    })()
+  var hasArrayBufferViewSupport =
+    hasBlobConstructor &&
+    window.Uint8Array &&
+    (function () {
+      try {
+        return new Blob([new Uint8Array(100)]).size === 100
+      } catch (e) {
+        return false
+      }
+    })()
+  var BlobBuilder =
+    window.BlobBuilder ||
+    window.WebKitBlobBuilder ||
+    window.MozBlobBuilder ||
+    window.MSBlobBuilder
+  var dataURIPattern = /^data:((.*?)(;charset=.*?)?)(;base64)?,/
+  var dataURLtoBlob =
+    (hasBlobConstructor || BlobBuilder) &&
+    window.atob &&
+    window.ArrayBuffer &&
+    window.Uint8Array &&
+    function (dataURI) {
+      var matches,
+        mediaType,
+        isBase64,
+        dataString,
+        byteString,
+        arrayBuffer,
+        intArray,
+        i,
+        bb
+      // Parse the dataURI components as per RFC 2397
+      matches = dataURI.match(dataURIPattern)
+      if (!matches) {
+        throw new Error('invalid data URI')
+      }
+      // Default to text/plain;charset=US-ASCII
+      mediaType = matches[2]
+        ? matches[1]
+        : 'text/plain' + (matches[3] || ';charset=US-ASCII')
+      isBase64 = !!matches[4]
+      dataString = dataURI.slice(matches[0].length)
+      if (isBase64) {
+        // Convert base64 to raw binary data held in a string:
+        byteString = atob(dataString)
+      } else {
+        // Convert base64/URLEncoded data component to raw binary:
+        byteString = decodeURIComponent(dataString)
+      }
+      // Write the bytes of the string to an ArrayBuffer:
+      arrayBuffer = new ArrayBuffer(byteString.length)
+      intArray = new Uint8Array(arrayBuffer)
+      for (i = 0; i < byteString.length; i += 1) {
+        intArray[i] = byteString.charCodeAt(i)
+      }
+      // Write the ArrayBuffer (or ArrayBufferView) to a blob:
+      if (hasBlobConstructor) {
+        return new Blob([hasArrayBufferViewSupport ? intArray : arrayBuffer], {
+          type: mediaType
+        })
+      }
+      bb = new BlobBuilder()
+      bb.append(arrayBuffer)
+      return bb.getBlob(mediaType)
+    }
+  if (window.HTMLCanvasElement && !CanvasPrototype.toBlob) {
+    if (CanvasPrototype.mozGetAsFile) {
+      CanvasPrototype.toBlob = function (callback, type, quality) {
+        var self = this
+        setTimeout(function () {
+          if (quality && CanvasPrototype.toDataURL && dataURLtoBlob) {
+            callback(dataURLtoBlob(self.toDataURL(type, quality)))
+          } else {
+            callback(self.mozGetAsFile('blob', type))
+          }
+        })
+      }
+    } else if (CanvasPrototype.toDataURL && dataURLtoBlob) {
+      CanvasPrototype.toBlob = function (callback, type, quality) {
+        var self = this
+        setTimeout(function () {
+          callback(dataURLtoBlob(self.toDataURL(type, quality)))
+        })
+      }
+    }
+  }
+  if (typeof define === 'function' && define.amd) {
+    define(function () {
+      return dataURLtoBlob
+    })
+  } else if (typeof module === 'object' && module.exports) {
+    module.exports = dataURLtoBlob
+  } else {
+    window.dataURLtoBlob = dataURLtoBlob
+  }
+})(window)
+</script>
